@@ -10,7 +10,7 @@ podTemplate(containers: [
       git branch: 'main', url:'https://github.com/harvash/cxa791-week_6.git'
       container('gradle') {
         stage('Build a gradle project') {
-          if (env.BRANCH_NAME == 'main') {
+          if (env.GIT_BRANCH == 'main') {
             sh '''cd Chapter08/sample1
                   chmod +x gradlew
                   ./gradlew test''' 
