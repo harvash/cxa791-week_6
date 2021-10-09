@@ -1,90 +1,66 @@
-pipeline {
-     agent any
-     triggers {
-          pollSCM('* * * * *')
-     }
-     stages {
-          stage("Compile") {
-               steps {
-                    sh "./gradlew compileJava"
-               }
+podTemplate(containers: [
+  containerTemplate(
+    name: 'gradle',
+    image: 'gradle:6.3-jdk14',
+    command: 'sleep',
+      args: '30d'),
+]) {
+  node(POD_LABEL) {
+    stage('Run pipeline against a gradle project') {
+      git 'https://github.com/harvash/Continuous-Delivery-with-Docker-and-Jenkins-Second-Edition.git'
+      container('gradle') {
+        stage('Build a gradle project') {
+          if (env.BRANCH_NAME == 'main') {
+            sh '''cd Chapter08/sample1
+                  chmod +x gradlew
+                  ./gradlew test''' 
           }
-          stage("Unit test") {
-               steps {
-                    sh "./gradlew test"
-               }
+        }
+        stage('Code coverage') {
+          if (env.BRANCH_NAME == 'main') {
+            sh '''pwd
+                  cd Chapter08/sample1
+                  ./gradlew jacocoTestCoverageVerification
+                  ./gradlew jacocoTestReport'''
+            publishHTML (
+              target: [
+                reportDir: 'Chapter08/sample1/build/reports/jacoco/test/html',
+                reportFiles: 'index.html',
+                reportName: 'JaCoCo Report'
+              ]
+            )
           }
-          stage("Code coverage") {
-               steps {
-                    sh "./gradlew jacocoTestReport"
-                    sh "./gradlew jacocoTestCoverageVerification"
-               }
+        }
+        stage('Checkstyle') {
+          if (env.BRANCH_NAME == 'feature') {
+            try {
+              sh '''pwd
+                    cd Chapter08/sample1
+                    ./gradlew checkstyleMain'''
+            } catch(all) {
+                echo "checkstyle fails"
+            }
+            publishHTML (
+              target: [
+                reportDir: 'Chapter08/sample1/build/reports/checkstyle',
+                reportFiles: 'main.html',
+                reportName: 'CheckStyle Report'
+              ]
+            )
           }
-          stage("Static code analysis") {
-               steps {
-                    sh "./gradlew checkstyleMain"
-               }
+        }
+        stage('Unit_test') {
+          if (env.BRANCH_NAME == 'feature') {
+            try {
+              sh '''pwd
+                    cd Chapter08/sample1
+                    ./gradlew test'''
+            } catch(all) {
+                echo "Unit tests fail"
+            }
           }
-          stage("Package") {
-               steps {
-                    sh "./gradlew build"
-               }
-          }
-
-          stage("Docker build") {
-               steps {
-                    sh "docker build -t leszko/calculator:${BUILD_TIMESTAMP} ."
-               }
-          }
-
-          stage("Docker login") {
-               steps {
-                    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'docker-hub-credentials',
-                               usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
-                         sh "docker login --username $USERNAME --password $PASSWORD"
-                    }
-               }
-          }
-
-          stage("Docker push") {
-               steps {
-                    sh "docker push leszko/calculator:${BUILD_TIMESTAMP}"
-               }
-          }
-
-          stage("Update version") {
-               steps {
-                    sh "sed  -i 's/{{VERSION}}/${BUILD_TIMESTAMP}/g' calculator.yaml"
-               }
-          }
-          
-          stage("Deploy to staging") {
-               steps {
-                    sh "kubectl config use-context staging"
-                    sh "kubectl apply -f hazelcast.yaml"
-                    sh "kubectl apply -f calculator.yaml"
-               }
-          }
-
-          stage("Acceptance test") {
-               steps {
-                    sleep 60
-                    sh "chmod +x acceptance-test.sh && ./acceptance-test.sh"
-               }
-          }
-
-          stage("Release") {
-               steps {
-                    sh "kubectl config use-context production"
-                    sh "kubectl apply -f hazelcast.yaml"
-                    sh "kubectl apply -f calculator.yaml"
-               }
-          }
-          stage("Smoke test") {
-              steps {
-                  sleep 60
-                  sh "chmod +x smoke-test.sh && ./smoke-test.sh"
-              }
-          }
-     }
+        }
+      }
+    }
+  }
 }
