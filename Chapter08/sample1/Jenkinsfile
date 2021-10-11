@@ -7,12 +7,19 @@ podTemplate(containers: [
 ]) {
   node(POD_LABEL) {
     stage('Run pipeline against a gradle project') {
+<<<<<<< HEAD
       git branch: 'playground', url:'https://github.com/harvash/cxa791-week_6.git'
+=======
+      git branch: 'main', url:'https://github.com/harvash/cxa791-week_6.git'
+>>>>>>> bbb38017b6acd6f6bb96c8fc8603b79f9d391c5d
       container('gradle') {
         stage('Build a gradle project') {
-          if (env.BRANCH_NAME == 'main') {
+          
+          sh '''cd Chapter08/sample1
+                  chmod +x gradlew '''
+
+          if (env.GIT_BRANCH == 'main') {
             sh '''cd Chapter08/sample1
-                  chmod +x gradlew
                   ./gradlew test''' 
           }
         }
