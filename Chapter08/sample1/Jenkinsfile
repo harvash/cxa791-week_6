@@ -14,7 +14,7 @@ podTemplate(containers: [
           sh '''cd Chapter08/sample1
                   chmod +x gradlew '''
 
-          if (env.GIT_BRANCH == 'main') {
+          if (env.BRANCH_NAME == 'main') {
             sh '''cd Chapter08/sample1
                   ./gradlew test''' 
           }
