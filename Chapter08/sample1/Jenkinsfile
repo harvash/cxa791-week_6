@@ -7,13 +7,14 @@ podTemplate(containers: [
 ]) {
   node(POD_LABEL) {
     stage('Run pipeline against a gradle project') {
-      git branch: env.BRANCH_NAME, url: 'https://github.com/harvash/cxa791-week_6.git'
+      git branch: env.BRANCH_NAME, url:'https://github.com/harvash/cxa791-week_6.git'
       container('gradle') {
         stage('Build a gradle project') {
           
-          sh '''cd Chapter08/sample1
-                  chmod +x gradlew '''
-
+          sh '''echo test webhook changed for pull request
+                cd Chapter08/sample1
+                chmod +x gradlew '''
+          
           if (env.BRANCH_NAME == 'main') {
             sh '''cd Chapter08/sample1
                   ./gradlew test''' 
